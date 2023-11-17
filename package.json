@@ -1,7 +1,7 @@
 {
   "name": "mern-shopping",
   "version": "1.0.0",
-  "description": "Refractor e-commerce platform from using global state React's Contect API to Redux.",
+  "description": "",
   "main": "server/server.js",
   "scripts": {
     "start": "if-env NODE_ENV=production && npm run start:prod || npm run start:dev",
