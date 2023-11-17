@@ -1,56 +1,39 @@
 import React from 'react';
-// commented out in favor of redux logic
-//import { useStoreContext } from '../../utils/GlobalState';
-import { useDispatch, useSelector } from 'react-redux';
-import { REMOVE_FROM_CART, UPDATE_CART_QUANTITY } from '../../utils/actions';
+import { useDispatch } from 'react-redux';
+import { REMOVE_FROM_CART, UPDATE_CART_QUANTITY } from "../../utils/actions";
 import { idbPromise } from "../../utils/helpers";
 
 const CartItem = ({ item }) => {
+  const dispatch = useDispatch();
 
-
-      /*
-    Note that we only destructured the dispatch() 
-    function from the useStoreContext Hook,
-    because the CartItem component has no 
-    need to read state. 
-    */
-    // commented out in favor of redux logic  
-    //const [, dispatch] = useStoreContext();
-    const state = useSelector((state) => {
-      return state
+  const removeFromCart = item => {
+    dispatch({
+      type: REMOVE_FROM_CART,
+      _id: item._id
     });
-    const dispatch = useDispatch();
+    idbPromise('cart', 'delete', { ...item });
 
-    const removeFromCart = item => {
+  };
+
+  const onChange = (e) => {
+    const value = e.target.value;
+    if (value === '0') {
       dispatch({
         type: REMOVE_FROM_CART,
         _id: item._id
       });
       idbPromise('cart', 'delete', { ...item });
-    };
-    
-    const onChange = (e) => {
-      const value = e.target.value;
-    
-      if (value === '0') {
-        dispatch({
-          type: REMOVE_FROM_CART,
-          _id: item._id
-        });
-      
-        idbPromise('cart', 'delete', { ...item });
-      } else {
-        dispatch({
-          type: UPDATE_CART_QUANTITY,
-          _id: item._id,
-          purchaseQuantity: parseInt(value)
-        });
-      
-        idbPromise('cart', 'put', { ...item, purchaseQuantity: parseInt(value) });
-      }
 
-    };
+    } else {
+      dispatch({
+        type: UPDATE_CART_QUANTITY,
+        _id: item._id,
+        purchaseQuantity: parseInt(value)
+      });
+      idbPromise('cart', 'put', { ...item, purchaseQuantity: parseInt(value) });
 
+    }
+  }
 
   return (
     <div className="flex-row">
