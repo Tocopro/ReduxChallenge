@@ -1,7 +1,5 @@
-const { AuthenticationError } = require('apollo-server-express');
 const { User, Product, Category, Order } = require('../models');
-const { signToken } = require('../utils/auth');
-
+const { signToken, AuthenticationError } = require('../utils/auth');
 const stripe = require('stripe')('sk_test_4eC39HqLyjWDarjtT1zdp7dc');
 
 const resolvers = {
@@ -39,7 +37,7 @@ const resolvers = {
         return user;
       }
 
-      throw new AuthenticationError('Not logged in');
+      throw AuthenticationError;
     },
     order: async (parent, { _id }, context) => {
       if (context.user) {
@@ -51,53 +49,34 @@ const resolvers = {
         return user.orders.id(_id);
       }
 
-      throw new AuthenticationError('Not logged in');
+      throw AuthenticationError;
     },
-    // stripe checkout query
     checkout: async (parent, args, context) => {
-      // parse out referring URL
       const url = new URL(context.headers.referer).origin;
       const order = new Order({ products: args.products });
-      const { products } = await order.populate('products').execPopulate();
-
       const line_items = [];
 
+      const { products } = await order.populate('products');
+
       for (let i = 0; i < products.length; i++) {
-        // generate product id
         const product = await stripe.products.create({
           name: products[i].name,
           description: products[i].description,
-          /*
-          Because we have access to the referring URL, 
-          we can also provide an image thumbnail when 
-          creating the product ID.
-          This is to pass the images to the stripe products array
-          */
           images: [`${url}/images/${products[i].image}`]
         });
 
-        // generate price id using the product id
         const price = await stripe.prices.create({
           product: product.id,
-          // multiple by 100 since price ammount is in cents
           unit_amount: products[i].price * 100,
           currency: 'usd',
         });
 
-        // add price id to the line items array
-        // why is qty 1 here?
         line_items.push({
           price: price.id,
           quantity: 1
         });
       }
 
-      /*
-      Line itmes array will be used to generate a Stripe
-      checkout session.
-      The checkout session ID is the only data the resolver needs,
-      so we can return it
-      */
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],
         line_items,
@@ -105,7 +84,7 @@ const resolvers = {
         success_url: `${url}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${url}/`
       });
-      
+
       return { session: session.id };
     }
   },
@@ -117,7 +96,6 @@ const resolvers = {
       return { token, user };
     },
     addOrder: async (parent, { products }, context) => {
-      console.log(context);
       if (context.user) {
         const order = new Order({ products });
 
@@ -126,14 +104,14 @@ const resolvers = {
         return order;
       }
 
-      throw new AuthenticationError('Not logged in');
+      throw AuthenticationError;
     },
     updateUser: async (parent, args, context) => {
       if (context.user) {
         return await User.findByIdAndUpdate(context.user._id, args, { new: true });
       }
 
-      throw new AuthenticationError('Not logged in');
+      throw AuthenticationError;
     },
     updateProduct: async (parent, { _id, quantity }) => {
       const decrement = Math.abs(quantity) * -1;
@@ -144,13 +122,13 @@ const resolvers = {
       const user = await User.findOne({ email });
 
       if (!user) {
-        throw new AuthenticationError('Incorrect credentials');
+        throw AuthenticationError;
       }
 
       const correctPw = await user.isCorrectPassword(password);
 
       if (!correctPw) {
-        throw new AuthenticationError('Incorrect credentials');
+        throw AuthenticationError;
       }
 
       const token = signToken(user);
@@ -161,3 +139,4 @@ const resolvers = {
 };
 
 module.exports = resolvers;
+
